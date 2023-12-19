@@ -52,7 +52,7 @@ namespace MyFamily.Controllers
         }
 
         [HttpPost("AddFinancialOperation")]
-        public async Task<ActionResult<Customer>> AddFinancialOperation(Guid idCustomer, string description, string category, decimal amount, CancellationToken cancellationToken)
+        public async Task<ActionResult<Customer>> AddFinancialOperation(Guid idCustomer, string description, string category, int amount, CancellationToken cancellationToken)
         {
             var customer = await _familyDbContext.Customers.FirstOrDefaultAsync(item => item.Id.Equals(idCustomer));
 
@@ -62,7 +62,8 @@ namespace MyFamily.Controllers
                 Description = description,
                 Category = category,
                 Amount = amount,
-                Date = DateTime.UtcNow
+                Date = DateTime.UtcNow,
+                CustomerId = customer.Id
             };
 
             if (customer.FinancialOperations == null)
