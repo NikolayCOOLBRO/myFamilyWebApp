@@ -9,16 +9,14 @@ namespace MyFamily.Controllers
     [Route("[controller]")]
     public class FamilyController : ControllerBase
     {
-        private readonly ILogger<FamilyController> _logger;
         private readonly IMyFamilyDbContext _familyDbContext;
 
-        public FamilyController(ILogger<FamilyController> logger, IMyFamilyDbContext dbContext)
+        public FamilyController(IMyFamilyDbContext dbContext)
         {
-            _logger = logger;
             _familyDbContext = dbContext;
         }
 
-        [HttpPost("CreateUser")]
+        [HttpPost("CreateCustomer")]
         public async Task<ActionResult<Customer>> CreateCustomer(string name, string logIn, CancellationToken cancellationToken)
         {
             if (string.IsNullOrEmpty(name) || string.IsNullOrWhiteSpace(name) || string.IsNullOrEmpty(logIn) || string.IsNullOrWhiteSpace(logIn))
@@ -26,7 +24,7 @@ namespace MyFamily.Controllers
                 return BadRequest();
             }
 
-            var newUser = new Customer()
+            var newCustomer = new Customer()
             {
                 Id = Guid.NewGuid(),
                 Name = name,
@@ -34,23 +32,56 @@ namespace MyFamily.Controllers
                 FinancialOperations = new List<FinancialOperation>()
             };
 
-            _familyDbContext.Customers.Add(newUser);
+            _familyDbContext.Customers.Add(newCustomer);
             await _familyDbContext.SaveChangesAsync(cancellationToken);
 
-            return Ok(newUser);
+            return Ok(newCustomer);
         }
 
-        [HttpGet("GetUserLogIn")]
-        public async Task<ActionResult<Customer>> GetCustomerLogIn(string logIn)
+        [HttpGet("GetCustomerLogIn")]
+        public async Task<ActionResult<Customer>> GetCustomerLogIn(string logIn, CancellationToken cancellationToken)
         {
             if (string.IsNullOrEmpty(logIn) || string.IsNullOrWhiteSpace(logIn))
             {
                 return BadRequest();
             }
 
-            var user = await _familyDbContext.Customers.FirstOrDefaultAsync(item => item.LogIn.Equals(logIn));
+            var customer = await _familyDbContext.Customers.FirstOrDefaultAsync(item => item.LogIn.Equals(logIn), cancellationToken);
 
-            return Ok(user);
+            return Ok(customer);
+        }
+
+        [HttpPost("AddFinancialOperation")]
+        public async Task<ActionResult<Customer>> AddFinancialOperation(Guid idCustomer, string description, string category, decimal amount, CancellationToken cancellationToken)
+        {
+            var customer = await _familyDbContext.Customers.FirstOrDefaultAsync(item => item.Id.Equals(idCustomer));
+
+            var financialOperation = new FinancialOperation()
+            {
+                Id = Guid.NewGuid(),
+                Description = description,
+                Category = category,
+                Amount = amount,
+                Date = DateTime.UtcNow
+            };
+
+            if (customer.FinancialOperations == null)
+            {
+                customer.FinancialOperations = new List<FinancialOperation>();
+            }
+
+            customer.FinancialOperations.Add(financialOperation);
+            _familyDbContext.FinancialOperations.Add(financialOperation);
+            await _familyDbContext.SaveChangesAsync(cancellationToken);
+
+            return Ok(customer);
+        }
+
+        [HttpGet("GetFinancialOperationOnCustomer")]
+        public async Task<ActionResult<ICollection<FinancialOperation>>> GetFinancialOperationOnCustomer(Guid idCustomer, CancellationToken cancellationToken)
+        {
+            var result = await _familyDbContext.Customers.FirstOrDefaultAsync(item => item.Id.Equals(idCustomer));
+            return Ok(result.FinancialOperations);
         }
     }
 }
