@@ -9,6 +9,5 @@
         public DateTime Date { get; set; }
 
         public Guid CustomerId { get; set; }
-        public Customer Customer { get; set; }
     }
 }

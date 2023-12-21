@@ -28,8 +28,7 @@ namespace MyFamily.Controllers
             {
                 Id = Guid.NewGuid(),
                 Name = name,
-                LogIn = logIn,
-                FinancialOperations = new List<FinancialOperation>()
+                LogIn = logIn
             };
 
             _familyDbContext.Customers.Add(newCustomer);
@@ -52,9 +51,12 @@ namespace MyFamily.Controllers
         }
 
         [HttpPost("AddFinancialOperation")]
-        public async Task<ActionResult<Customer>> AddFinancialOperation(Guid idCustomer, string description, string category, int amount, CancellationToken cancellationToken)
+        public async Task<ActionResult<FinancialOperation>> AddFinancialOperation(Guid idCustomer, string description, string category, int amount, CancellationToken cancellationToken)
         {
-            var customer = await _familyDbContext.Customers.FirstOrDefaultAsync(item => item.Id.Equals(idCustomer));
+            if (_familyDbContext.Customers.FirstOrDefault(item => item.Id.Equals(idCustomer)) == null)
+            {
+                return BadRequest();
+            }
 
             var financialOperation = new FinancialOperation()
             {
@@ -62,27 +64,30 @@ namespace MyFamily.Controllers
                 Description = description,
                 Category = category,
                 Amount = amount,
-                Date = DateTime.UtcNow,
-                CustomerId = customer.Id
+                Date = DateTime.Now,
+                CustomerId = idCustomer
             };
 
-            if (customer.FinancialOperations == null)
-            {
-                customer.FinancialOperations = new List<FinancialOperation>();
-            }
-
-            customer.FinancialOperations.Add(financialOperation);
             _familyDbContext.FinancialOperations.Add(financialOperation);
             await _familyDbContext.SaveChangesAsync(cancellationToken);
 
-            return Ok(customer);
+            return Ok(financialOperation);
         }
 
         [HttpGet("GetFinancialOperationOnCustomer")]
         public async Task<ActionResult<ICollection<FinancialOperation>>> GetFinancialOperationOnCustomer(Guid idCustomer, CancellationToken cancellationToken)
         {
-            var result = await _familyDbContext.Customers.FirstOrDefaultAsync(item => item.Id.Equals(idCustomer));
-            return Ok(result.FinancialOperations);
+            var result = new List<FinancialOperation>();
+
+            foreach (var item in _familyDbContext.FinancialOperations)
+            {
+                if (item.CustomerId.Equals(idCustomer))
+                {
+                    result.Add(item);
+                }
+            }
+
+            return Ok(result);
         }
     }
 }

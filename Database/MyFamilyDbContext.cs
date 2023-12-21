@@ -12,14 +12,5 @@ namespace MyFamily.Database
         {
             Database.EnsureCreated();
         }
-
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-            modelBuilder.Entity<Customer>()
-                .HasMany(i => i.FinancialOperations)
-                .WithOne(i => i.Customer)
-                .HasForeignKey(i => i.CustomerId)
-                .HasPrincipalKey(i => i.Id);
-        }
     }
 }
