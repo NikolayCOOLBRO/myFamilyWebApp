@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MyFamily.Database;
 using MyFamily.Models;
+using MyFamily.Models.DTO;
 
 namespace MyFamily.Controllers
 {
@@ -17,9 +18,9 @@ namespace MyFamily.Controllers
         }
 
         [HttpPost("CreateCustomer")]
-        public async Task<ActionResult<Customer>> CreateCustomer(string name, string logIn, CancellationToken cancellationToken)
+        public async Task<ActionResult<Customer>> CreateCustomer([FromBody] CreateCustomerDTO createCustomer, CancellationToken cancellationToken)
         {
-            if (string.IsNullOrEmpty(name) || string.IsNullOrWhiteSpace(name) || string.IsNullOrEmpty(logIn) || string.IsNullOrWhiteSpace(logIn))
+            if (string.IsNullOrEmpty(createCustomer.Name) || string.IsNullOrWhiteSpace(createCustomer.Name) || string.IsNullOrEmpty(createCustomer.LogIn) || string.IsNullOrWhiteSpace(createCustomer.LogIn))
             {
                 return BadRequest();
             }
@@ -27,8 +28,8 @@ namespace MyFamily.Controllers
             var newCustomer = new Customer()
             {
                 Id = Guid.NewGuid(),
-                Name = name,
-                LogIn = logIn
+                Name = createCustomer.Name,
+                LogIn = createCustomer.LogIn
             };
 
             _familyDbContext.Customers.Add(newCustomer);
@@ -51,9 +52,9 @@ namespace MyFamily.Controllers
         }
 
         [HttpPost("AddFinancialOperation")]
-        public async Task<ActionResult<FinancialOperation>> AddFinancialOperation(Guid idCustomer, string description, string category, int amount, CancellationToken cancellationToken)
+        public async Task<ActionResult<FinancialOperation>> AddFinancialOperation([FromBody] AddFinancialOperationDTO addFinancialOperationDTO, CancellationToken cancellationToken)
         {
-            if (_familyDbContext.Customers.FirstOrDefault(item => item.Id.Equals(idCustomer)) == null)
+            if (_familyDbContext.Customers.FirstOrDefault(item => item.Id.Equals(addFinancialOperationDTO.IdCustomer)) == null)
             {
                 return BadRequest();
             }
@@ -61,11 +62,11 @@ namespace MyFamily.Controllers
             var financialOperation = new FinancialOperation()
             {
                 Id = Guid.NewGuid(),
-                Description = description,
-                Category = category,
-                Amount = amount,
-                Date = DateTime.Now,
-                CustomerId = idCustomer
+                Description = addFinancialOperationDTO.Description,
+                Category = addFinancialOperationDTO.Category,
+                Amount = addFinancialOperationDTO.Amount,
+                Date = addFinancialOperationDTO.CreatedDate,
+                CustomerId = addFinancialOperationDTO.IdCustomer
             };
 
             _familyDbContext.FinancialOperations.Add(financialOperation);
@@ -74,18 +75,37 @@ namespace MyFamily.Controllers
             return Ok(financialOperation);
         }
 
-        [HttpGet("GetFinancialOperationOnCustomer")]
-        public async Task<ActionResult<ICollection<FinancialOperation>>> GetFinancialOperationOnCustomer(Guid idCustomer, CancellationToken cancellationToken)
+        [HttpGet("GetFinancialOperationOnCustomerId")]
+        public async Task<ActionResult<ICollection<FinancialOperation>>> GetFinancialOperationOnCustomerId(Guid idCustomer, CancellationToken cancellationToken)
         {
             var result = new List<FinancialOperation>();
 
-            foreach (var item in _familyDbContext.FinancialOperations)
+            await _familyDbContext.FinancialOperations.ForEachAsync(item =>
             {
                 if (item.CustomerId.Equals(idCustomer))
                 {
                     result.Add(item);
                 }
-            }
+            }, cancellationToken);
+
+
+            return Ok(result);
+        }
+
+        [HttpGet("GetFinancialOperationOnCustomerLogIn")]
+        public async Task<ActionResult<ICollection<FinancialOperation>>> GetFinancialOperationOnCustomerLogIn(string login, CancellationToken cancellationToken)
+        {
+            var customer = await _familyDbContext.Customers.FirstOrDefaultAsync(item => item.LogIn.Equals(login), cancellationToken);
+
+            var result = new List<FinancialOperation>();
+
+            await _familyDbContext.FinancialOperations.ForEachAsync(item =>
+            {
+                if (item.CustomerId.Equals(customer.Id))
+                {
+                    result.Add(item);
+                }
+            }, cancellationToken);
 
             return Ok(result);
         }

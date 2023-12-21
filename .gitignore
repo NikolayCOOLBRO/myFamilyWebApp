@@ -5,6 +5,8 @@
 
 ## database
 *.db
+my_family_db.db-shm
+my_family_db.db-wal
 
 # User-specific files
 *.rsuser
